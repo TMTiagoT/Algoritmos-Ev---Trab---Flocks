@@ -8,7 +8,7 @@ public class FlockManager : MonoBehaviour
     public FlockAgent flockAgentPrefab; //script flockAgent
     public FlockBehavior flockBehavior; //script flockBehavior
 
-    [Range(10, 500)]
+    [Range(1, 500)]
     public int startingCount; //quantidade inicial de agentes na cena //default 250
 
     [Range(1f, 100f)]
@@ -62,7 +62,7 @@ public class FlockManager : MonoBehaviour
             Vector2 flockPosition = Random.insideUnitCircle * startingCount * agentDensity; //posicao "aleatoria" dentro do range especificado para o novo flock
             Quaternion flockRotation = Quaternion.Euler(Vector3.forward * Random.Range(0f, 360f)); //rotacao "aleatoria" para o novo flock (de 0 a 360)
 
-            FlockAgent newFlockAgent = Instantiate(flockAgentPrefab, flockPosition, flockRotation, transform); //instanciar novo flock (como filho do manager)
+            FlockAgent newFlockAgent = Instantiate(flockAgentPrefab, new Vector3(flockPosition.x, flockPosition.y, gameObject.transform.position.z), flockRotation, transform); //instanciar novo flock (como filho do manager)
             newFlockAgent.name = "Agent " + i; //ajustar nome
             newFlockAgent.flockManager = this; //ajustar quem criou o flock
 
