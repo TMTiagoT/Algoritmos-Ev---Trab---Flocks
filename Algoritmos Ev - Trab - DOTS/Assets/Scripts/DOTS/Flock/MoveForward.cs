@@ -46,15 +46,24 @@ public class MoveForward : JobComponentSystem
         [ReadOnly]
         public float maxSpeed; //velocidade maxima de um agente //default 5
 
-        [ReadOnly]
-        public float neighborRadius; //raio ao redor do agente que ira considerar objetos //default 1.5
-        [ReadOnly]
-        public float avoidanceRadiusMultiplier; //distancia minima de um agente do outro (para separar --> com relacao ao neighborRadius) //default 0.5
+        //[ReadOnly]
+        //public float neighborRadius; //raio ao redor do agente que ira considerar objetos //default 1.5
+        //[ReadOnly]
+        //public float avoidanceRadiusMultiplier; //distancia minima de um agente do outro (para separar --> com relacao ao neighborRadius) //default 0.5
 
         [ReadOnly]
         public float squareMaxSpeed; //variavel auxiliar //default 25
+        //[ReadOnly]
+        //public float squareAvoidanceRadius; //variavel auxiliar
+
         [ReadOnly]
-        public float squareAvoidanceRadius; //variavel auxiliar
+        public NativeArray<float> neighborRadiusNArray; //neighborRadius dos objetos
+        //[ReadOnly]
+        //public NativeArray<float> squareNeighborRadiusNArray; //squareNeighborRadius dos objetos
+        [ReadOnly]
+        public NativeArray<float> avoidanceRadiusMultiplierNArray; //avoidanceRadiusMultiplier dos objetos
+        [ReadOnly]
+        public NativeArray<float> squareAvoidanceRadiusNArray; //squareAvoidanceRadius dos objetos
 
         private float3 currentVelocity; //velocidade atual do behavior
         private int index; //valor/posicao do flock
@@ -89,7 +98,7 @@ public class MoveForward : JobComponentSystem
             NativeList<float3> nearObjectsT = FindNearbyFlocks(agentPos, flockWho, out NativeList<quaternion> nearObjectsR); //encontrar lista de objetos proximos ao agente
             NativeList<float3> nearObjectsOT = FindNearbyObjects(agentPos, ref flockWho); //encontrar lista de objetos proximos ao agente
 
-            float3 movement = CalculateMove_CompositeBehavior(agentPos, nearObjectsT, flockWho.flockManagerValue, rot, nearObjectsR, nearObjectsOT); //calcular movimento do agente
+            float3 movement = CalculateMove_CompositeBehavior(agentPos, nearObjectsT, flockWho.flockManagerValue, rot, nearObjectsR, nearObjectsOT, flockWho); //calcular movimento do agente
             movement *= driveFactor; //ajustar velocidade/movimento do agente
 
             float lenAux = math.length(movement);
@@ -115,12 +124,12 @@ public class MoveForward : JobComponentSystem
                 //Debug.Log(possibleNearEntitiesT[i].Value);
                 float distAux = math.distance(possibleNearEntitiesT[i].Value, agentPos);
                 if (possibleNearEntitiesFW[i].flockValue != flockWho.flockValue &&
-                    distAux < neighborRadius) //se nao for o proprio collider do objeto/agente (e estiver dentro da range)
+                    distAux < neighborRadiusNArray[flockWho.flockManagerValue]) //se nao for o proprio collider do objeto/agente (e estiver dentro da range)
                 {
                     nearObjectsT.Add(possibleNearEntitiesT[i].Value); //adicionar transform do objeto na lista de transforms de objetos "proximos"
                     nearObjectsR.Add(possibleNearEntitiesR[i].Value); //adicionar transform do objeto na lista de transforms de objetos "proximos"
 
-                    if (distAux < neighborRadius * avoidanceRadiusMultiplier / 2) //se "bater" no obstaculo
+                    if (distAux < neighborRadiusNArray[flockWho.flockManagerValue] * avoidanceRadiusMultiplierNArray[flockWho.flockManagerValue] / 2) //se "bater" no obstaculo
                     {
                         flockWho.flockCollisionCount += 1;
                     }
@@ -130,7 +139,7 @@ public class MoveForward : JobComponentSystem
             return nearObjectsT;
         }
 
-        public float3 CalculateMove_CompositeBehavior(float3 flockAgent, NativeList<float3> nearObjectsT, int flockManagerN, quaternion rot, NativeList<quaternion> nearObjectsR, NativeList<float3> nearObjectsOT) //funcao que calcula o movimento de um individuo (baseado tambem nos objetos e/ou "vizinhos" ao seu redor)
+        public float3 CalculateMove_CompositeBehavior(float3 flockAgent, NativeList<float3> nearObjectsT, int flockManagerN, quaternion rot, NativeList<quaternion> nearObjectsR, NativeList<float3> nearObjectsOT, FlockWho flockWho) //funcao que calcula o movimento de um individuo (baseado tambem nos objetos e/ou "vizinhos" ao seu redor)
         {
             float3 compositeMovement = float3.zero; //inicializar valores
             float3 partialMovement;
@@ -177,7 +186,7 @@ public class MoveForward : JobComponentSystem
             }
 
             //avoidance
-            partialMovement = CalculateMove_AvoidanceBehavior(flockAgent, nearObjectsT, flockManagerN, rot, nearObjectsR) * behaviorsWeights[posBehavior + 3]; //atribuir valor do movimento para o comportamento
+            partialMovement = CalculateMove_AvoidanceBehavior(flockAgent, nearObjectsT, flockManagerN, rot, nearObjectsR, flockWho) * behaviorsWeights[posBehavior + 3]; //atribuir valor do movimento para o comportamento
             if (!partialMovement.Equals(float3.zero)) //se for diferente de "0"
             {
                 lenAux = math.length(partialMovement);
@@ -190,7 +199,7 @@ public class MoveForward : JobComponentSystem
             }
 
             //avoidance objects
-            partialMovement = CalculateMove_AvoidanceBehavior(flockAgent, nearObjectsOT, flockManagerN, rot, nearObjectsR) * behaviorsWeights[posBehavior + 4]; //atribuir valor do movimento para o comportamento
+            partialMovement = CalculateMove_AvoidanceBehavior(flockAgent, nearObjectsOT, flockManagerN, rot, nearObjectsR, flockWho) * behaviorsWeights[posBehavior + 4]; //atribuir valor do movimento para o comportamento
             if (!partialMovement.Equals(float3.zero)) //se for diferente de "0"
             {
                 lenAux = math.length(partialMovement);
@@ -248,7 +257,7 @@ public class MoveForward : JobComponentSystem
             return centerOffset * inRadiusValue * inRadiusValue; //retornar nova posicao/movimento do objeto
         }
 
-        public float3 CalculateMove_AvoidanceBehavior(float3 flockAgent, NativeList<float3> nearObjectsT, int flockManagerN, quaternion rot, NativeList<quaternion> nearObjectsR) //funcao que calcula o movimento de um individuo (baseado tambem nos objetos e/ou "vizinhos" ao seu redor)
+        public float3 CalculateMove_AvoidanceBehavior(float3 flockAgent, NativeList<float3> nearObjectsT, int flockManagerN, quaternion rot, NativeList<quaternion> nearObjectsR, FlockWho flockWho) //funcao que calcula o movimento de um individuo (baseado tambem nos objetos e/ou "vizinhos" ao seu redor)
         {
             if (nearObjectsT.Length == 0) return float3.zero; //se nao tiver objetos proximos, retornar "0"
 
@@ -259,7 +268,7 @@ public class MoveForward : JobComponentSystem
             for (int i = 0; i < nearObjectsT.Length; i++) //para cada objeto "proximo"
             {
                 lenAux = math.length(nearObjectsT[i] - flockAgent);
-                if (lenAux * lenAux < squareAvoidanceRadius) //verificar se o objeto esta dentro do raio de "evasao"
+                if (lenAux * lenAux < squareAvoidanceRadiusNArray[flockWho.flockManagerValue]) //verificar se o objeto esta dentro do raio de "evasao"
                 {
                     inAvoidRadiusCount += 1; //somar a quantidade de objetos dentro do raio de "evasao"
                     avoidanceMove += (flockAgent - nearObjectsT[i]); //somar a distancia do flock do objeto //(para enviar o agente na direcao contraria para "separar" do objeto)
@@ -282,11 +291,11 @@ public class MoveForward : JobComponentSystem
             {
                 //Debug.Log(possibleNearEntitiesT[i].Value);
                 float distAux = math.distance(possibleNearObjectsT[i].Value, agentPos);
-                if (distAux < neighborRadius) //se nao for o proprio collider do objeto/agente (e estiver dentro da range)
+                if (distAux < neighborRadiusNArray[flockWho.flockManagerValue]) //se nao for o proprio collider do objeto/agente (e estiver dentro da range)
                 {
                     nearObjectsT.Add(possibleNearObjectsT[i].Value); //adicionar transform do objeto na lista de transforms de objetos "proximos"
 
-                    if (distAux < neighborRadius * avoidanceRadiusMultiplier) //se "bater" no obstaculo
+                    if (distAux < neighborRadiusNArray[flockWho.flockManagerValue] * avoidanceRadiusMultiplierNArray[flockWho.flockManagerValue]) //se "bater" no obstaculo
                     {
                         flockWho.objectCollisionCount += 1;
                     }
@@ -378,7 +387,7 @@ public class MoveForward : JobComponentSystem
             driveFactor = flockManager.driveFactor,
             maxSpeed = flockManager.maxSpeed,
             squareMaxSpeed = flockManager.squareMaxSpeed,
-            neighborRadius = flockManager.neighborRadius,
+            //neighborRadius = flockManager.neighborRadius,
             possibleNearEntitiesT = flockManager.flockAgents_ECS_T,
             possibleNearEntitiesR = flockManager.flockAgents_ECS_R,
             possibleNearEntitiesFW = flockManager.flockAgents_ECS_FW,
@@ -388,13 +397,16 @@ public class MoveForward : JobComponentSystem
             radius = flockManager.radius,
             radiusCenter = flockManager.radiusCenter,
             radiusLimiterPer = flockManager.radiusLimiterPer,
-            squareAvoidanceRadius = flockManager.squareAvoidanceRadius,
+            //squareAvoidanceRadius = flockManager.squareAvoidanceRadius,
             flocksQuantityPerLayer = flockManager.flocksQuantityPerLayer,
             layersQuantity = flockManager.layersQuantity,
             startingCount = flockManager.startingCount,
-            avoidanceRadiusMultiplier = flockManager.avoidanceRadiusMultiplier,
+            //avoidanceRadiusMultiplier = flockManager.avoidanceRadiusMultiplier,
             possibleNearObjectsT = flockManager.objectAgents_ECS_T,
-            qtdObjects = flockManager.qtdObjects
+            qtdObjects = flockManager.qtdObjects,
+            neighborRadiusNArray = flockManager.neighborRadiusNArray,
+            squareAvoidanceRadiusNArray = flockManager.squareAvoidanceRadiusNArray,
+            avoidanceRadiusMultiplierNArray = flockManager.avoidanceRadiusMultiplierNArray
         };
 
         return moveForward.Schedule(this, inputDeps); //colocar job para funcionar

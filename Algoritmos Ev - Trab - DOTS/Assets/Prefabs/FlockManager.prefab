@@ -82,4 +82,4 @@ MonoBehaviour:
   lineSize: 15
   lineHeight: 1
   qtdObjects: 0
-  a: 0
+  restartTest: 0

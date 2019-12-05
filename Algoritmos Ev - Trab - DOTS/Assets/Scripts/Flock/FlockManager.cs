@@ -83,6 +83,15 @@ public class FlockManager : MonoBehaviour
     [HideInInspector]
     public NativeArray<float> behaviorsWeightsNArray; //pesos dos comportamentos nas acoes do objeto
 
+    [HideInInspector]
+    public NativeArray<float> neighborRadiusNArray; //neighborRadius dos objetos
+    [HideInInspector]
+    public NativeArray<float> squareNeighborRadiusNArray; //squareNeighborRadius dos objetos
+    [HideInInspector]
+    public NativeArray<float> avoidanceRadiusMultiplierNArray; //avoidanceRadiusMultiplier dos objetos
+    [HideInInspector]
+    public NativeArray<float> squareAvoidanceRadiusNArray; //squareAvoidanceRadius dos objetos
+
     //steered cohesion
     public float agentSmoothTime; //tempo para "suavizar" o movimento //default 0.5
 
@@ -116,6 +125,7 @@ public class FlockManager : MonoBehaviour
     [HideInInspector]
     public int qtdObjects;//quantidade total de objetos nos objetos
 
+    private int qtdFlocksInFlock;
     private int qtdFlocks;
 
     // Use this for initialization
@@ -125,26 +135,40 @@ public class FlockManager : MonoBehaviour
         squareNeighborRadius = neighborRadius * neighborRadius;
         squareAvoidanceRadius = squareNeighborRadius * avoidanceRadiusMultiplier * avoidanceRadiusMultiplier;
         qtdObjects = qtdOfLines * lineSize * lineHeight;
-        qtdFlocks = layersQuantity * flocksQuantityPerLayer * startingCount;
+        qtdFlocks = layersQuantity * flocksQuantityPerLayer;
+        qtdFlocksInFlock = qtdFlocks * startingCount;
 
         entityManager = World.Active.EntityManager; //incializar valores
         //entityManager.CreateEntity();
         flockAgentEntity = GameObjectConversionUtility.ConvertGameObjectHierarchy(flockAgentPref, World.Active);
 
         //flockAgents = new List<FlockAgent_ECS>(); //inicializar valores
-        flockAgents_ECS = new NativeArray<Entity>(qtdFlocks, Allocator.Persistent);
-        flockAgents_ECS_T = new NativeArray<Translation>(qtdFlocks, Allocator.Persistent);
-        flockAgents_ECS_R = new NativeArray<Rotation>(qtdFlocks, Allocator.Persistent);
-        flockAgents_ECS_FW = new NativeArray<FlockWho>(qtdFlocks, Allocator.Persistent);
+        flockAgents_ECS = new NativeArray<Entity>(qtdFlocksInFlock, Allocator.Persistent);
+        flockAgents_ECS_T = new NativeArray<Translation>(qtdFlocksInFlock, Allocator.Persistent);
+        flockAgents_ECS_R = new NativeArray<Rotation>(qtdFlocksInFlock, Allocator.Persistent);
+        flockAgents_ECS_FW = new NativeArray<FlockWho>(qtdFlocksInFlock, Allocator.Persistent);
 
         objectAgents_ECS = new NativeArray<Entity>(layersQuantity * qtdObjects, Allocator.Persistent);
         objectAgents_ECS_T = new NativeArray<Translation>(layersQuantity * qtdObjects, Allocator.Persistent);
 
-        behaviorsWeightsNArray = new NativeArray<float>(behaviorsWeights.Length * layersQuantity * flocksQuantityPerLayer, Allocator.Persistent);
+        behaviorsWeightsNArray = new NativeArray<float>(behaviorsWeights.Length * qtdFlocks, Allocator.Persistent);
 
-        for (int i = 0; i < behaviorsWeights.Length * layersQuantity * flocksQuantityPerLayer; i++) //inciializar pesos
+        for (int i = 0; i < behaviorsWeights.Length * qtdFlocks; i++) //incializar pesos
         {
             behaviorsWeightsNArray[i] = behaviorsWeights[i % behaviorsWeights.Length];
+        }
+
+        neighborRadiusNArray = new NativeArray<float>(qtdFlocks, Allocator.Persistent);
+        squareNeighborRadiusNArray = new NativeArray<float>(qtdFlocks, Allocator.Persistent);
+        squareAvoidanceRadiusNArray = new NativeArray<float>(qtdFlocks, Allocator.Persistent);
+        avoidanceRadiusMultiplierNArray = new NativeArray<float>(qtdFlocks, Allocator.Persistent);
+
+        for (int i = 0; i < qtdFlocks; i++) //incializar pesos
+        {
+            neighborRadiusNArray[i] = neighborRadius;
+            squareNeighborRadiusNArray[i] = squareNeighborRadius;
+            squareAvoidanceRadiusNArray[i] = squareAvoidanceRadius;
+            avoidanceRadiusMultiplierNArray[i] = avoidanceRadiusMultiplier;
         }
 
         //InitializeFlock_ECS(); //inicializar cena/flocks
@@ -179,7 +203,7 @@ public class FlockManager : MonoBehaviour
 
     public void UpdateData() //atualiza os dados necessarios das entidades
     {
-        for (int i = 0; i < qtdFlocks; i++) //para cada flock
+        for (int i = 0; i < qtdFlocksInFlock; i++) //para cada flock
         {
             flockAgents_ECS_T[i] = entityManager.GetComponentData<Translation>(flockAgents_ECS[i]); //pegar a posicao
             flockAgents_ECS_R[i] = entityManager.GetComponentData<Rotation>(flockAgents_ECS[i]); //pegar a rotacao
@@ -272,11 +296,16 @@ public class FlockManager : MonoBehaviour
         objectAgents_ECS_T.Dispose(); //liberar o array alocado
 
         behaviorsWeightsNArray.Dispose(); //liberar o array alocado
+
+        neighborRadiusNArray.Dispose(); //liberar o array alocado
+        squareNeighborRadiusNArray.Dispose(); //liberar o array alocado
+        squareAvoidanceRadiusNArray.Dispose(); //liberar o array alocado
+        avoidanceRadiusMultiplierNArray.Dispose(); //liberar o array alocado
     }
 
     public void RestartFlocks()
     {
-        for (int i = 0; i < qtdFlocks; i++) //para cada flock
+        for (int i = 0; i < qtdFlocksInFlock; i++) //para cada flock
         {
             Vector2 flockPosition = UnityEngine.Random.insideUnitCircle * startingCount * agentDensity; //posicao "aleatoria" dentro do range especificado para o novo flock
             Quaternion flockRotation = Quaternion.Euler(Vector3.forward * UnityEngine.Random.Range(0f, 360f)); //rotacao "aleatoria" para o novo flock (de 0 a 360)
@@ -293,6 +322,12 @@ public class FlockManager : MonoBehaviour
             flockAgents_ECS_T[i] = newT; //setar arrays auxiliares
             flockAgents_ECS_R[i] = newR;
             flockAgents_ECS_FW[i] = newFW;
+        }
+
+        for (int i = 0; i < qtdFlocks; i++)
+        {
+            squareNeighborRadiusNArray[i] = neighborRadiusNArray[i] * neighborRadiusNArray[i];
+            squareAvoidanceRadiusNArray[i] = squareNeighborRadiusNArray[i] * avoidanceRadiusMultiplierNArray[i] * avoidanceRadiusMultiplierNArray[i];
         }
     }
 }
