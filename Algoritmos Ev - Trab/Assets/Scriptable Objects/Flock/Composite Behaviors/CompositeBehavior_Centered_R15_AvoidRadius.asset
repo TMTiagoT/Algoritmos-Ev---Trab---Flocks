@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10002f4398eeaf740bf31069913a9a65, type: 3}
+  m_Name: CompositeBehavior_Centered_R15_AvoidRadius
+  m_EditorClassIdentifier: 
+  flockBehaviors:
+  - {fileID: 11400000, guid: 1ed63442d7e333f4d9b068547a8b2a48, type: 2}
+  - {fileID: 11400000, guid: 4fce3da9dcb24134691879a76368d8c9, type: 2}
+  - {fileID: 11400000, guid: 7bbc5d7c263afee4398c3bbdd82629ed, type: 2}
+  - {fileID: 11400000, guid: 017280ba09db7264cb0441e9efc59828, type: 2}
+  - {fileID: 11400000, guid: d12873e9153afd047af27e50318359b0, type: 2}
+  behaviorsWeights:
+  - 5
+  - 3
+  - 0.3
+  - 7
+  - 11
