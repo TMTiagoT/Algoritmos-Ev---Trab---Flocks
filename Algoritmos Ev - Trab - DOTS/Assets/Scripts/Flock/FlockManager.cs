@@ -102,7 +102,7 @@ public class FlockManager : MonoBehaviour
     public float radiusLimiterPer; //porcentagem de limite para sair/chegar perto do raio maximo para comecar a afetar os objetos //default 0.9f
 
     //-----------------
-    [Range(1, 100)]
+    //[Range(1, 100)]
     [Header("Dados da geracao")]
     public GameObject flocksLayerPrefab; //prefab de uma layer de flocks para ser spawnada
 
@@ -266,6 +266,23 @@ public class FlockManager : MonoBehaviour
                 }
             }
         }
+
+        // int radius = 10;
+        // int numArc = Mathf.FloorToInt(2f * Mathf.PI * radius / dist);
+        // float arcStep = 2f * Mathf.PI / numArc;
+
+        // int qtda = lineHeight * lineSize * qtdOfLines;
+        // for (int i = 0; i < numArc; i++)
+        // {
+        //     float3 position = new float3(radius * Mathf.Cos(arcStep * i), radius * Mathf.Sin(arcStep * i), gameObject.transform.position.z + zPos);
+
+        //     Translation newT = new Translation { Value = position };
+        //     entityManager.SetComponentData(objectAgents_ECS[qtda+ i], newT); //setar a posicao
+        //     Rotation newR = new Rotation { Value =  };
+        //     entityManager.SetComponentData(objectAgents_ECS[qtda+ i], newR); //setar a rotacao
+
+        //     objectAgents_ECS_T[qtda+ i] = newT; //setar arrays auxiliares
+        // }
     }
 
     private void OnDrawGizmos() //ao desenhar o gizmos da unity //para testes

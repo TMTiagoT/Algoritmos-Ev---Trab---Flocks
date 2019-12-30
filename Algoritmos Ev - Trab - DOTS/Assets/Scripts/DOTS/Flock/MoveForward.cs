@@ -129,7 +129,7 @@ public class MoveForward : JobComponentSystem
                     nearObjectsT.Add(possibleNearEntitiesT[i].Value); //adicionar transform do objeto na lista de transforms de objetos "proximos"
                     nearObjectsR.Add(possibleNearEntitiesR[i].Value); //adicionar transform do objeto na lista de transforms de objetos "proximos"
 
-                    if (distAux < neighborRadiusNArray[flockWho.flockManagerValue] * avoidanceRadiusMultiplierNArray[flockWho.flockManagerValue] / 2) //se "bater" no obstaculo
+                    if (distAux < neighborRadiusNArray[flockWho.flockManagerValue] * avoidanceRadiusMultiplierNArray[flockWho.flockManagerValue]) //se "bater" no obstaculo
                     {
                         flockWho.flockCollisionCount += 1;
                     }
